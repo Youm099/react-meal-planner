@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from "react";
 import Header from "./Header.jsx";
-import supabase from "../supabaseClient.js"; // Fixed typo 'supabade' here
+import supabase from "../supabaseClient.js"; 
 import "../App.css"; 
 
 function Dashboard() {
@@ -16,7 +16,7 @@ function Dashboard() {
   });
 
   const fetchMeals = async () => {
-    const { data, error } = await supabase // Will now work because of the fixed import
+    const { data, error } = await supabase 
       .from('meals')
       .select('*')
       .order('created_at', { ascending: false });
@@ -38,31 +38,39 @@ function Dashboard() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    const { error } = await supabase
-      .from('meals')
-      .insert([
-        {
-          meal_name: formData.mealName,
-          day: formData.day,
-          meal_type: formData.mealType,
-          calories: formData.calories,
-          notes: formData.notes
-        }
-      ]);
+  console.log("Button clicked");
 
-    if (!error) {
-      fetchMeals();
-      setFormData({
-        mealName: "",
-        day: "",
-        mealType: "",
-        calories: "",
-        notes: ""
-      });
-    }
-  };
+  const { data, error } = await supabase
+    .from('meals')
+    .insert([
+      {
+        meal_name: formData.mealName,
+        day: formData.day,
+        meal_type: formData.mealType,
+        calories: formData.calories,
+        notes: formData.notes
+      }
+    ]);
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  console.log("Meal added");
+
+  fetchMeals();
+
+  setFormData({
+    mealName: "",
+    day: "",
+    mealType: "",
+    calories: "",
+    notes: ""
+  });
+};
 
   const clearMeals = async () => {
     await supabase
@@ -196,7 +204,6 @@ function Dashboard() {
                 .filter((meal) => meal.day === day)
                 .map((meal) => (
                   <div className="meal-card" key={meal.id}>
-                    {/* Fixed both lines below to read snake_case from the database data */}
                     <h4>{meal.meal_name}</h4>
                     <p>{meal.meal_type}</p>
                     <p>{meal.calories} calories</p>
@@ -213,6 +220,6 @@ function Dashboard() {
       </button>
     </div>
   );
-} // Removed the extra trailing '}' that was here
+} 
 
 export default Dashboard;
