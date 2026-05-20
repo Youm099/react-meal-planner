@@ -1,11 +1,10 @@
 
-
-
 import React, { useState, useEffect } from "react";
 import Header from "./Header.jsx";
+import supabase from "../supabaseClient.js"; // Fixed typo 'supabade' here
 import "../App.css"; 
-function Dashboard() {
 
+function Dashboard() {
   const [meals, setMeals] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -16,17 +15,20 @@ function Dashboard() {
     notes: ""
   });
 
-  useEffect(() => {
-    const savedMeals = localStorage.getItem("meals");
+  const fetchMeals = async () => {
+    const { data, error } = await supabase // Will now work because of the fixed import
+      .from('meals')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (savedMeals) {
-      setMeals(JSON.parse(savedMeals));
+    if (!error) {
+      setMeals(data);
     }
-  }, []);
+  };
 
   useEffect(() => {
-    localStorage.setItem("meals", JSON.stringify(meals));
-  }, [meals]);
+    fetchMeals();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -35,34 +37,47 @@ function Dashboard() {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const newMeal = {
-      id: Date.now(),
-      ...formData
-    };
+    const { error } = await supabase
+      .from('meals')
+      .insert([
+        {
+          meal_name: formData.mealName,
+          day: formData.day,
+          meal_type: formData.mealType,
+          calories: formData.calories,
+          notes: formData.notes
+        }
+      ]);
 
-    setMeals([...meals, newMeal]);
-
-    setFormData({
-      mealName: "",
-      day: "",
-      mealType: "",
-      calories: "",
-      notes: ""
-    });
+    if (!error) {
+      fetchMeals();
+      setFormData({
+        mealName: "",
+        day: "",
+        mealType: "",
+        calories: "",
+        notes: ""
+      });
+    }
   };
 
-  const clearMeals = () => {
-    setMeals([]);
+  const clearMeals = async () => {
+    await supabase
+      .from('meals')
+      .delete()
+      .neq('id', 0);
+
+    fetchMeals();
   };
 
   const totalCalories = meals.reduce(
     (sum, meal) => sum + Number(meal.calories || 0),
     0
   );
-
+ 
   const days = [
     "monday",
     "tuesday",
@@ -75,21 +90,15 @@ function Dashboard() {
 
   return (
     <div className="dashboard-container">
-
       <Header />
 
       {/* FORM SECTION */}
       <section className="form-section">
-
         <h2>Add a Meal</h2>
-
         <form onSubmit={handleSubmit}>
-
           <div className="form-row">
-
             <div className="form-group">
               <label>Meal Name</label>
-
               <input
                 type="text"
                 name="mealName"
@@ -102,7 +111,6 @@ function Dashboard() {
 
             <div className="form-group">
               <label>Day</label>
-
               <select
                 name="day"
                 value={formData.day}
@@ -110,7 +118,6 @@ function Dashboard() {
                 required
               >
                 <option value="">Select Day</option>
-
                 {days.map((day) => (
                   <option key={day} value={day}>
                     {day.charAt(0).toUpperCase() + day.slice(1)}
@@ -118,15 +125,11 @@ function Dashboard() {
                 ))}
               </select>
             </div>
-
           </div>
 
           <div className="form-row">
-
             <div className="form-group">
-
               <label>Meal Type</label>
-
               <select
                 name="mealType"
                 value={formData.mealType}
@@ -139,13 +142,10 @@ function Dashboard() {
                 <option value="Dinner">Dinner</option>
                 <option value="Snack">Snack</option>
               </select>
-
             </div>
 
             <div className="form-group">
-
               <label>Calories</label>
-
               <input
                 type="number"
                 name="calories"
@@ -153,35 +153,25 @@ function Dashboard() {
                 onChange={handleChange}
                 placeholder="500"
               />
-
             </div>
-
           </div>
 
           <div className="form-group">
-
             <label>Recipe / Notes</label>
-
             <textarea
               name="notes"
               value={formData.notes}
               onChange={handleChange}
               placeholder="Recipe and notes..."
             />
-
           </div>
 
-          <button type="submit">
-            Add Meal
-          </button>
-
+          <button type="submit">Add Meal</button>
         </form>
-
       </section>
 
       {/* STATS */}
       <section className="stats-section">
-
         <div className="stat-card">
           <h3>{meals.length}</h3>
           <p>Total Meals</p>
@@ -191,57 +181,38 @@ function Dashboard() {
           <h3>{totalCalories}</h3>
           <p>Total Calories</p>
         </div>
-
       </section>
 
       {/* WEEK GRID */}
       <section className="week-grid">
-
         {days.map((day) => (
-
           <div className="day-card" key={day}>
-
             <h3>
               {day.charAt(0).toUpperCase() + day.slice(1)}
             </h3>
 
             <div className="meals-container">
-
               {meals
                 .filter((meal) => meal.day === day)
                 .map((meal) => (
-
                   <div className="meal-card" key={meal.id}>
-
-                    <h4>{meal.mealName}</h4>
-
-                    <p>{meal.mealType}</p>
-
+                    {/* Fixed both lines below to read snake_case from the database data */}
+                    <h4>{meal.meal_name}</h4>
+                    <p>{meal.meal_type}</p>
                     <p>{meal.calories} calories</p>
-
                     <small>{meal.notes}</small>
-
                   </div>
-
-              ))}
-
+                ))}
             </div>
-
           </div>
-
         ))}
-
       </section>
 
-      <button
-        className="clear-btn"
-        onClick={clearMeals}
-      >
+      <button className="clear-btn" onClick={clearMeals}>
         Clear All Meals
       </button>
-
     </div>
   );
-}
+} // Removed the extra trailing '}' that was here
 
 export default Dashboard;
